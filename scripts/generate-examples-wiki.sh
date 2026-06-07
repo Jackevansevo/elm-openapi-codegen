@@ -49,10 +49,13 @@ extract_schemas() {
 generate_elm() {
   local fixture="$1"
   local input="testdata/examples/$fixture/input.yaml"
-  local out_dir="$tmp_dir/$fixture/Generated"
+  local project_dir="$tmp_dir/$fixture"
+  local out_dir="$project_dir/src/Generated"
 
+  mkdir -p "$project_dir"
+  printf '{"type":"application","source-directories":["src"]}\n' >"$project_dir/elm.json"
   mkdir -p "$out_dir"
-  go run ./cmd/elm-openapi-codegen --out "$out_dir" --module-root Generated "$input" >/dev/null
+  go run ./cmd/elm-openapi-codegen --out "$out_dir" "$input" >/dev/null
   find "$out_dir" -type f -name '*.elm' | sort
 }
 

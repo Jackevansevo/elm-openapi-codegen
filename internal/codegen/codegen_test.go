@@ -174,8 +174,83 @@ func TestParseOptionsRequiresOut(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected parseOptions to reject missing --out")
 	}
-	if !strings.Contains(err.Error(), "missing required --out <module-root-dir>") {
+	if !strings.Contains(err.Error(), "missing required --out <elm-output-dir>") {
 		t.Fatalf("expected missing --out error, got %v", err)
+	}
+}
+
+func TestParseOptionsRejectsModuleRoot(t *testing.T) {
+	_, err := parseOptions([]string{"--out", "src/Generated", "--module-root", "Generated", "openapi.yaml"})
+	if err == nil {
+		t.Fatal("expected parseOptions to reject --module-root")
+	}
+	if !strings.Contains(err.Error(), "usage: elm-openapi-codegen --out <elm-output-dir> <openapi-spec-file>") {
+		t.Fatalf("expected usage error, got %v", err)
+	}
+}
+
+func TestInferModuleRootFromElmSourceDirectory(t *testing.T) {
+	dir := t.TempDir()
+	writeElmJSON(t, dir, `{"type":"application","source-directories":["src"]}`)
+
+	got, err := inferModuleRoot(filepath.Join(dir, "src", "Generated"))
+	if err != nil {
+		t.Fatalf("inferModuleRoot returned error: %v", err)
+	}
+	if got != "Generated" {
+		t.Fatalf("module root = %q, want Generated", got)
+	}
+}
+
+func TestInferModuleRootFromNestedElmSourceDirectory(t *testing.T) {
+	dir := t.TempDir()
+	writeElmJSON(t, dir, `{"type":"application","source-directories":["frontend/src"]}`)
+
+	got, err := inferModuleRoot(filepath.Join(dir, "frontend", "src", "Api", "Generated"))
+	if err != nil {
+		t.Fatalf("inferModuleRoot returned error: %v", err)
+	}
+	if got != "Api.Generated" {
+		t.Fatalf("module root = %q, want Api.Generated", got)
+	}
+}
+
+func TestInferModuleRootAllowsSourceRootOutput(t *testing.T) {
+	dir := t.TempDir()
+	writeElmJSON(t, dir, `{"type":"application","source-directories":["src"]}`)
+
+	got, err := inferModuleRoot(filepath.Join(dir, "src"))
+	if err != nil {
+		t.Fatalf("inferModuleRoot returned error: %v", err)
+	}
+	if got != "" {
+		t.Fatalf("module root = %q, want empty", got)
+	}
+}
+
+func TestInferModuleRootRejectsOutOutsideElmSourceDirectories(t *testing.T) {
+	dir := t.TempDir()
+	writeElmJSON(t, dir, `{"type":"application","source-directories":["src"]}`)
+
+	_, err := inferModuleRoot(filepath.Join(dir, "generated"))
+	if err == nil {
+		t.Fatal("expected inferModuleRoot to reject output outside source-directories")
+	}
+	if !strings.Contains(err.Error(), "is not inside any source-directories") {
+		t.Fatalf("expected source-directory error, got %v", err)
+	}
+}
+
+func TestInferModuleRootRejectsInvalidElmModulePath(t *testing.T) {
+	dir := t.TempDir()
+	writeElmJSON(t, dir, `{"type":"application","source-directories":["src"]}`)
+
+	_, err := inferModuleRoot(filepath.Join(dir, "src", "generated"))
+	if err == nil {
+		t.Fatal("expected inferModuleRoot to reject invalid module root")
+	}
+	if !strings.Contains(err.Error(), "invalid Elm module root") {
+		t.Fatalf("expected invalid module root error, got %v", err)
 	}
 }
 
@@ -196,6 +271,37 @@ func TestGeneratedModulePathsAreRelativeToModuleRoot(t *testing.T) {
 	}
 	if got, want := byName["Generated.User"].Path, "User.elm"; got != want {
 		t.Fatalf("schema module path = %q, want %q", got, want)
+	}
+}
+
+func TestGeneratedModulesCanUseTopLevelNames(t *testing.T) {
+	doc := loadSpecFile(t, filepath.Join(referenceFixtureDir, "object", "primitive-field", "input.yaml"))
+	m, err := buildModel(doc, "")
+	if err != nil {
+		t.Fatalf("buildModel returned error: %v", err)
+	}
+	modules, err := generateModules(m)
+	if err != nil {
+		t.Fatalf("generateModules returned error: %v", err)
+	}
+
+	byName := modulesByName(modules)
+	module, ok := byName["User"]
+	if !ok {
+		t.Fatalf("expected generated module User, got %s", moduleNames(modules))
+	}
+	if got, want := module.Path, "User.elm"; got != want {
+		t.Fatalf("schema module path = %q, want %q", got, want)
+	}
+	if !strings.Contains(module.Content, "module User exposing") {
+		t.Fatalf("expected top-level Elm module declaration, got:\n%s", module.Content)
+	}
+}
+
+func writeElmJSON(t *testing.T, dir, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "elm.json"), []byte(content), 0644); err != nil {
+		t.Fatalf("write elm.json: %v", err)
 	}
 }
 

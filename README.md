@@ -15,14 +15,19 @@ go install github.com/jackevansevo/elm-openapi-codegen/cmd/elm-openapi-codegen@l
 ```
 
 ```sh
-elm-openapi-codegen --out <module-root-dir> [--module-root Generated] <openapi-spec-file>
+elm-openapi-codegen --out <elm-output-dir> <openapi-spec-file>
 ```
 
 For example:
 
 ```sh
-elm-openapi-codegen --out src/Generated --module-root Generated testdata/object/primitive-field/input.yaml
+elm-openapi-codegen --out src/Generated openapi.yaml
 ```
+
+The output directory must be inside one of the `source-directories` from the
+nearest `elm.json`. Elm module names are inferred from the output path relative
+to that source directory. For example, with `"source-directories": ["src"]`,
+`--out src/Generated` writes modules such as `Generated.User`.
 
 ## Elm Dependencies
 

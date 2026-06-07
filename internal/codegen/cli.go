@@ -2,17 +2,21 @@ package codegen
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/getkin/kin-openapi/openapi3"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 type options struct {
-	specPath   string
-	outDir     string
-	moduleRoot string
+	specPath string
+	outDir   string
 }
 
 func RunCLI(args []string, stderr io.Writer) int {
@@ -30,11 +34,10 @@ func RunCLI(args []string, stderr io.Writer) int {
 }
 
 func parseOptions(args []string) (options, error) {
-	opts := options{moduleRoot: "Generated"}
+	var opts options
 	flags := flag.NewFlagSet("elm-openapi-codegen", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	flags.StringVar(&opts.outDir, "out", "", "module root output directory")
-	flags.StringVar(&opts.moduleRoot, "module-root", opts.moduleRoot, "Elm module root")
+	flags.StringVar(&opts.outDir, "out", "", "generated Elm output directory")
 	if err := flags.Parse(args); err != nil {
 		return opts, usage()
 	}
@@ -44,19 +47,21 @@ func parseOptions(args []string) (options, error) {
 	}
 	opts.specPath = positionals[0]
 	if opts.outDir == "" {
-		return opts, errors.New("missing required --out <module-root-dir>")
-	}
-	if !validModuleName(opts.moduleRoot) {
-		return opts, fmt.Errorf("invalid --module-root %q", opts.moduleRoot)
+		return opts, errors.New("missing required --out <elm-output-dir>")
 	}
 	return opts, nil
 }
 
 func usage() error {
-	return errors.New("usage: elm-openapi-codegen --out <module-root-dir> [--module-root Generated] <openapi-spec-file>")
+	return errors.New("usage: elm-openapi-codegen --out <elm-output-dir> <openapi-spec-file>")
 }
 
 func run(opts options) error {
+	moduleRoot, err := inferModuleRoot(opts.outDir)
+	if err != nil {
+		return err
+	}
+
 	loader := openapi3.NewLoader()
 	doc, err := loader.LoadFromFile(opts.specPath)
 	if err != nil {
@@ -66,7 +71,7 @@ func run(opts options) error {
 		return fmt.Errorf("validate spec: %w", err)
 	}
 
-	m, err := buildModel(doc, opts.moduleRoot)
+	m, err := buildModel(doc, moduleRoot)
 	if err != nil {
 		return err
 	}
@@ -75,4 +80,82 @@ func run(opts options) error {
 		return err
 	}
 	return writeModules(opts.outDir, modules)
+}
+
+type elmJSON struct {
+	SourceDirectories []string `json:"source-directories"`
+}
+
+func inferModuleRoot(outDir string) (string, error) {
+	absOut, err := filepath.Abs(outDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve --out: %w", err)
+	}
+	absOut = filepath.Clean(absOut)
+
+	projectRoot, config, err := findElmProject(absOut)
+	if err != nil {
+		return "", err
+	}
+
+	var matches []string
+	for _, sourceDir := range config.SourceDirectories {
+		absSourceDir := filepath.Clean(filepath.Join(projectRoot, sourceDir))
+		rel, err := filepath.Rel(absSourceDir, absOut)
+		if err != nil {
+			return "", fmt.Errorf("compare --out with source directory %q: %w", sourceDir, err)
+		}
+		if rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." && !filepath.IsAbs(rel)) {
+			matches = append(matches, rel)
+		}
+	}
+
+	if len(matches) == 0 {
+		return "", fmt.Errorf("--out %q is not inside any source-directories in %s", outDir, filepath.Join(projectRoot, "elm.json"))
+	}
+	if len(matches) > 1 {
+		return "", fmt.Errorf("--out %q matches multiple source-directories in %s", outDir, filepath.Join(projectRoot, "elm.json"))
+	}
+	return moduleRootFromRelativePath(matches[0])
+}
+
+func findElmProject(start string) (string, elmJSON, error) {
+	dir := filepath.Clean(start)
+	for {
+		path := filepath.Join(dir, "elm.json")
+		content, err := os.ReadFile(path)
+		if err == nil {
+			var config elmJSON
+			if err := json.Unmarshal(content, &config); err != nil {
+				return "", elmJSON{}, fmt.Errorf("parse %s: %w", path, err)
+			}
+			if len(config.SourceDirectories) == 0 {
+				return "", elmJSON{}, fmt.Errorf("%s has no source-directories", path)
+			}
+			return dir, config, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", elmJSON{}, fmt.Errorf("read %s: %w", path, err)
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", elmJSON{}, fmt.Errorf("could not find elm.json for --out %q", start)
+		}
+		dir = parent
+	}
+}
+
+func moduleRootFromRelativePath(rel string) (string, error) {
+	if rel == "." {
+		return "", nil
+	}
+
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	for _, part := range parts {
+		if !validModuleName(part) {
+			return "", fmt.Errorf("--out implies invalid Elm module root %q", strings.Join(parts, "."))
+		}
+	}
+	return strings.Join(parts, "."), nil
 }

@@ -52,7 +52,7 @@ func buildModel(doc *openapi3.T, moduleRoot string) (*model, error) {
 				m.Schemas[name].Recursive = true
 			}
 		}
-		moduleName := moduleRoot + "." + pascalName(moduleLeaf)
+		moduleName := schemaModuleName(moduleRoot, moduleLeaf)
 		for _, name := range component {
 			m.ModuleByName[name] = moduleName
 			m.DefsByModule[moduleName] = append(m.DefsByModule[moduleName], name)
@@ -64,6 +64,14 @@ func buildModel(doc *openapi3.T, moduleRoot string) (*model, error) {
 	}
 
 	return m, nil
+}
+
+func schemaModuleName(moduleRoot, schemaName string) string {
+	leaf := pascalName(schemaName)
+	if moduleRoot == "" {
+		return leaf
+	}
+	return moduleRoot + "." + leaf
 }
 
 func normalizeSchema(m *model, name string, ref *openapi3.SchemaRef, path string) (*schemaDef, error) {
