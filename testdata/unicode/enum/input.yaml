@@ -1,0 +1,13 @@
+openapi: 3.0.4
+info:
+  title: Unicode Enum
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    CafeStatus:
+      type: string
+      enum:
+        - café-com-leite
+        - éclair
+        - 用户

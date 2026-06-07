@@ -1,0 +1,23 @@
+openapi: 3.0.4
+info:
+  title: Catalog Books
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Book:
+      allOf:
+        - $ref: '#/components/schemas/CatalogItem'
+        - type: object
+          properties:
+            authorName:
+              type: string
+            isbn:
+              type: string
+    CatalogItem:
+      type: object
+      properties:
+        itemId:
+          type: string
+        title:
+          type: string

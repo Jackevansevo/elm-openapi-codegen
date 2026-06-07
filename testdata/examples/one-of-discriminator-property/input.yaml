@@ -1,0 +1,34 @@
+openapi: 3.0.4
+info:
+  title: Vehicles
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Vehicle:
+      oneOf:
+        - $ref: '#/components/schemas/Car'
+        - $ref: '#/components/schemas/Boat'
+      discriminator:
+        propertyName: kind
+        mapping:
+          car: '#/components/schemas/Car'
+          boat: '#/components/schemas/Boat'
+    Car:
+      type: object
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+        wheels:
+          type: integer
+    Boat:
+      type: object
+      required:
+        - kind
+      properties:
+        draft:
+          type: number
+        kind:
+          type: string

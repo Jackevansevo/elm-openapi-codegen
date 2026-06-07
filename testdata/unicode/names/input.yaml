@@ -1,0 +1,16 @@
+openapi: 3.0.4
+info:
+  title: Unicode Names
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    CafePedido:
+      type: object
+      properties:
+        éclair-status:
+          type: string
+        número:
+          type: integer
+        用户:
+          type: boolean

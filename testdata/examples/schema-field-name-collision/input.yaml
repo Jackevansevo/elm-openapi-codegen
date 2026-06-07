@@ -1,0 +1,14 @@
+openapi: 3.0.4
+info:
+  title: Colliding Fields
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        foo-bar:
+          type: string
+        foo_bar:
+          type: integer

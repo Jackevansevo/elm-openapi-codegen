@@ -1,0 +1,19 @@
+openapi: 3.0.4
+info:
+  title: Unicode Schema Values
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    CafePedido:
+      type: object
+      properties:
+        número:
+          type: integer
+        用户:
+          type: string
+    CafeStatus:
+      type: string
+      enum:
+        - café
+        - 用户

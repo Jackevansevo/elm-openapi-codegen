@@ -1,0 +1,25 @@
+openapi: 3.0.4
+info:
+  title: Search Result
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    SearchResult:
+      oneOf:
+        - $ref: '#/components/schemas/User'
+        - $ref: '#/components/schemas/Team'
+    User:
+      type: object
+      required:
+        - userName
+      properties:
+        userName:
+          type: string
+    Team:
+      type: object
+      required:
+        - teamName
+      properties:
+        teamName:
+          type: string

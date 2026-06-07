@@ -1,0 +1,13 @@
+openapi: 3.0.4
+info:
+  title: Mixed Enum
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Mixed:
+      enum:
+        - 1
+        - active
+        - 1.5
+        - true

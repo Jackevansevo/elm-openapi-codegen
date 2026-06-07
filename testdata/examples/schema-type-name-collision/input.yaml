@@ -1,0 +1,11 @@
+openapi: 3.0.4
+info:
+  title: Colliding Schemas
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Foo-Bar:
+      type: string
+    Foo_Bar:
+      type: integer

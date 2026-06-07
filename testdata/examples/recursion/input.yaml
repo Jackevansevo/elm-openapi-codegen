@@ -1,0 +1,21 @@
+openapi: 3.0.4
+info:
+  title: Comments
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Comment:
+      type: object
+      required:
+        - author
+        - body
+      properties:
+        author:
+          type: string
+        body:
+          type: string
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'

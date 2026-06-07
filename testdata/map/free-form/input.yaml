@@ -1,0 +1,10 @@
+openapi: 3.0.4
+info:
+  title: Metadata
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Metadata:
+      type: object
+      additionalProperties: true

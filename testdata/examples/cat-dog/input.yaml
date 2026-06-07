@@ -1,0 +1,49 @@
+openapi: 3.0.4
+info:
+  title: Pets
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Animal:
+      anyOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+    Pet:
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+      discriminator:
+        propertyName: petType
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+    Cat:
+      type: object
+      required:
+        - name
+        - petType
+      properties:
+        livesLeft:
+          type: integer
+        name:
+          type: string
+        petType:
+          type: string
+          enum:
+            - cat
+    Dog:
+      type: object
+      required:
+        - barkVolume
+        - name
+        - petType
+      properties:
+        barkVolume:
+          type: integer
+        name:
+          type: string
+        petType:
+          type: string
+          enum:
+            - dog

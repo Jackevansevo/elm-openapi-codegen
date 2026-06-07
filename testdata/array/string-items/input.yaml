@@ -1,0 +1,14 @@
+openapi: 3.0.4
+info:
+  title: User
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string

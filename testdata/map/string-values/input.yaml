@@ -1,0 +1,11 @@
+openapi: 3.0.4
+info:
+  title: Translations
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Translations:
+      type: object
+      additionalProperties:
+        type: string

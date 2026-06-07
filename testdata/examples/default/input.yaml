@@ -1,0 +1,13 @@
+openapi: 3.0.4
+info:
+  title: Inventory
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    InventoryItem:
+      type: object
+      properties:
+        stock:
+          type: integer
+          default: 0

@@ -1,0 +1,11 @@
+openapi: 3.0.4
+info:
+  title: Recursive Array Alias
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Node:
+      type: array
+      items:
+        $ref: '#/components/schemas/Node'

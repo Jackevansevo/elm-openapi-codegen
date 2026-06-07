@@ -1,0 +1,11 @@
+openapi: 3.0.4
+info:
+  title: Order Status
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    OrderStatus:
+      type: string
+      enum:
+        - active

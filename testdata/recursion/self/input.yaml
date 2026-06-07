@@ -1,0 +1,12 @@
+openapi: 3.0.4
+info:
+  title: Comment
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Comment:
+      type: object
+      properties:
+        reply:
+          $ref: '#/components/schemas/Comment'

@@ -1,0 +1,12 @@
+openapi: 3.0.4
+info:
+  title: Cleanup Marker Scope
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Current:
+      type: object
+      properties:
+        name:
+          type: string

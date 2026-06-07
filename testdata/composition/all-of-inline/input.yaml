@@ -1,0 +1,17 @@
+openapi: 3.0.4
+info:
+  title: User
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    User:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+        - type: object
+          properties:
+            name:
+              type: string
