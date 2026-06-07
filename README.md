@@ -6,13 +6,15 @@ The generator reads `components.schemas` from an OpenAPI document, normalizes th
 schemas into an internal model, then writes Elm modules for the generated types
 and decoders.
 
-## Usage
+## Installation
 
 Install the CLI with:
 
 ```sh
 go install github.com/jackevansevo/elm-openapi-codegen/cmd/elm-openapi-codegen@latest
 ```
+
+## Usage
 
 ```sh
 elm-openapi-codegen --out <elm-output-dir> <openapi-spec-file>
@@ -28,12 +30,6 @@ The output directory must be inside one of the `source-directories` from the
 nearest `elm.json`. Elm module names are inferred from the output path relative
 to that source directory. For example, with `"source-directories": ["src"]`,
 `--out src/Generated` writes modules such as `Generated.User`.
-
-## Elm Dependencies
-
-Generated decoders use `Json.Decode.Pipeline` from
-`NoRedInk/elm-json-decode-pipeline`. Install it in the Elm project that will
-compile the generated modules:
 
 # Example
 
