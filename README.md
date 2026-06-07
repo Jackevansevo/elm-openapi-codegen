@@ -14,23 +14,9 @@ Install the CLI with:
 go install github.com/jackevansevo/elm-openapi-codegen/cmd/elm-openapi-codegen@latest
 ```
 
-## Elm Dependencies
-
-Generated decoders use `Json.Decode.Pipeline` from
-`NoRedInk/elm-json-decode-pipeline`. Install it in the Elm project that will
-compile the generated modules:
-
-```sh
-elm install NoRedInk/elm-json-decode-pipeline
-```
-
 ```sh
 elm-openapi-codegen --out <module-root-dir> [--module-root Generated] <openapi-spec-file>
 ```
-
-`--out` is required. It is the exact directory that corresponds to the Elm
-module root; the generator does not append the module root for you. With the
-default `--module-root Generated`, pass a directory such as `src/Generated`.
 
 For example:
 
@@ -38,17 +24,11 @@ For example:
 elm-openapi-codegen --out src/Generated --module-root Generated testdata/object/primitive-field/input.yaml
 ```
 
-That writes files such as `src/Generated/User.elm` while the Elm module remains
-`Generated.User`.
+## Elm Dependencies
 
-For a custom module root, point `--out` at the matching directory:
-
-```sh
-elm-openapi-codegen --out src/Api/V1 --module-root Api.V1 openapi.yaml
-```
-
-That writes files such as `src/Api/V1/User.elm` while the Elm module remains
-`Api.V1.User`.
+Generated decoders use `Json.Decode.Pipeline` from
+`NoRedInk/elm-json-decode-pipeline`. Install it in the Elm project that will
+compile the generated modules:
 
 # Example
 
