@@ -610,6 +610,15 @@ type elmPattern interface {
 	renderPattern() string
 }
 
+type elmVariantPattern struct {
+	Name  string
+	Inner elmPattern
+}
+
+func (p elmVariantPattern) renderPattern() string {
+	return p.Name + " " + p.Inner.renderPattern()
+}
+
 type elmVarPattern struct {
 	Name string
 }

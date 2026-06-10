@@ -1,1 +1,1 @@
-Generated.OrderStatus
+Generated.BookStatus

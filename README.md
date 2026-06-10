@@ -116,6 +116,93 @@ Required fields use the mapped type directly. Optional fields are wrapped in
 `Maybe` unless they have a supported default value. Nullable fields are also
 wrapped in `Maybe` and decoded with `Decode.nullable`.
 
+## Enum Types
+
+String enums generate a custom union type with helper functions:
+
+```yaml
+BookStatus:
+  type: string
+  enum:
+    - draft
+    - published
+    - archived
+```
+
+Generated output:
+
+```elm
+module Generated.BookStatus exposing (BookStatus(..), all, bookStatusDecoder, bookStatusEncoder, fromString, toString)
+
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
+
+
+type BookStatus
+    = Draft
+    | Published
+    | Archived
+
+
+all : List BookStatus
+all =
+    [ Draft
+    , Published
+    , Archived
+    ]
+
+
+toString : BookStatus -> String
+toString value =
+    case value of
+        Draft ->
+            "draft"
+
+        Published ->
+            "published"
+
+        Archived ->
+            "archived"
+
+
+fromString : String -> Result String BookStatus
+fromString value =
+    case value of
+        "draft" ->
+            Ok Draft
+
+        "published" ->
+            Ok Published
+
+        "archived" ->
+            Ok Archived
+
+        _ ->
+            Err ("Unknown BookStatus: " ++ value)
+
+
+bookStatusDecoder : Decoder BookStatus
+bookStatusDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\value ->
+                case fromString value of
+                    Ok enumValue ->
+                        Decode.succeed enumValue
+
+                    Err err ->
+                        Decode.fail err
+            )
+
+
+bookStatusEncoder : BookStatus -> Encode.Value
+bookStatusEncoder value =
+    Encode.string (toString value)
+```
+
+Integer, float, and boolean enums also generate `all`, `toString`, and `fromString` but keep type-specific
+encoder and decoder implementations since their JSON wire format is not a string.
+
 For more generated examples, see the [Examples wiki page](/Jackevansevo/elm-openapi-codegen/wiki/Examples).
 
 # Implementation

@@ -60,20 +60,42 @@ func schemaToElmDecls(def *schemaDef) ([]elmDecl, error) {
 			},
 		}, nil
 	case kindEnum:
-		return []elmDecl{
+		decls := []elmDecl{
 			elmUnionDecl{Name: typeName, Cases: enumUnionCases(def)},
-			elmFunctionDecl{
-				Name:      decoderName(def.Name),
-				Signature: "Decoder " + typeName,
-				Body:      enumDecoderBody(def),
-			},
-			elmFunctionDecl{
-				Name:      encoderName(def.Name),
-				Args:      []string{"value"},
-				Signature: typeName + " -> Encode.Value",
-				Body:      enumEncoderBody(def),
-			},
-		}, nil
+			enumAllDecl(typeName, def),
+			enumToStringDecl(typeName, def),
+			enumFromStringDecl(typeName, def),
+		}
+		if enumIsStringOnly(def) {
+			decls = append(decls,
+				elmFunctionDecl{
+					Name:      decoderName(def.Name),
+					Signature: "Decoder " + typeName,
+					Body:      enumDecoderBodyString(typeName),
+				},
+				elmFunctionDecl{
+					Name:      encoderName(def.Name),
+					Args:      []string{"value"},
+					Signature: typeName + " -> Encode.Value",
+					Body:      enumEncoderBodyString(),
+				},
+			)
+		} else {
+			decls = append(decls,
+				elmFunctionDecl{
+					Name:      decoderName(def.Name),
+					Signature: "Decoder " + typeName,
+					Body:      enumDecoderBody(def),
+				},
+				elmFunctionDecl{
+					Name:      encoderName(def.Name),
+					Args:      []string{"value"},
+					Signature: typeName + " -> Encode.Value",
+					Body:      enumEncoderBody(def),
+				},
+			)
+		}
+		return decls, nil
 	case kindOneOf:
 		return []elmDecl{
 			elmUnionDecl{Name: typeName, Cases: variantUnionCases(def)},
@@ -111,6 +133,161 @@ func enumUnionCases(def *schemaDef) []elmUnionCase {
 		cases = append(cases, elmUnionCase{Name: c.Name})
 	}
 	return cases
+}
+
+func enumIsStringOnly(def *schemaDef) bool {
+	for _, c := range def.Enum {
+		if _, ok := c.Value.(string); !ok {
+			return false
+		}
+	}
+	return len(def.Enum) > 0
+}
+
+func enumAllDecl(typeName string, def *schemaDef) elmDecl {
+	var items []elmExpr
+	for _, c := range def.Enum {
+		items = append(items, elmVarExpr{Name: c.Name})
+	}
+	return elmFunctionDecl{
+		Name:      "all",
+		Signature: "List " + typeName,
+		Body:      elmListExpr{Items: items},
+	}
+}
+
+func enumToStringDecl(typeName string, def *schemaDef) elmDecl {
+	enumToStringBody := func() elmExpr {
+		var branches []elmCaseBranch
+		for _, c := range def.Enum {
+			branches = append(branches, elmCaseBranch{
+				Pattern: elmVarPattern{Name: c.Name},
+				Body:    elmStringExpr{Value: enumValueString(c.Value)},
+			})
+		}
+		return elmCaseExpr{
+			Expr:     elmVarExpr{Name: "value"},
+			Branches: branches,
+		}
+	}
+	return elmFunctionDecl{
+		Name:      "toString",
+		Args:      []string{"value"},
+		Signature: typeName + " -> String",
+		Body:      enumToStringBody(),
+	}
+}
+
+func enumFromStringDecl(typeName string, def *schemaDef) elmDecl {
+	enumFromStringBody := func() elmExpr {
+		var branches []elmCaseBranch
+		for _, c := range def.Enum {
+			branches = append(branches, elmCaseBranch{
+				Pattern: elmStringPattern{Value: enumValueString(c.Value)},
+				Body: elmCallExpr{
+					Fn:   elmVarExpr{Name: "Ok"},
+					Args: []elmExpr{elmVarExpr{Name: c.Name}},
+				},
+			})
+		}
+		branches = append(branches, elmCaseBranch{
+			Pattern: elmVarPattern{Name: "_"},
+			Body: elmCallExpr{
+				Fn: elmVarExpr{Name: "Err"},
+				Args: []elmExpr{
+					elmParensExpr{
+						Expr: elmBinOpExpr{
+							Left:  elmStringExpr{Value: "Unknown " + typeName + ": "},
+							Op:    "++",
+							Right: elmVarExpr{Name: "value"},
+						},
+					},
+				},
+			},
+		})
+		return elmCaseExpr{
+			Expr:     elmVarExpr{Name: "value"},
+			Branches: branches,
+		}
+	}
+	return elmFunctionDecl{
+		Name:      "fromString",
+		Args:      []string{"value"},
+		Signature: "String -> Result String " + typeName,
+		Body:      enumFromStringBody(),
+	}
+}
+
+func enumValueString(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case bool:
+		if v {
+			return "True"
+		}
+		return "False"
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case int:
+		return strconv.Itoa(v)
+	default:
+		return fmt.Sprint(value)
+	}
+}
+
+func enumDecoderBodyString(typeName string) elmExpr {
+	return elmPipeExpr{
+		Start: elmVarExpr{Name: "Decode.string"},
+		Steps: []elmExpr{
+			elmCallExpr{
+				Fn: elmVarExpr{Name: "Decode.andThen"},
+				Args: []elmExpr{
+					elmLambdaExpr{
+						Args: []elmPattern{elmVarPattern{Name: "value"}},
+						Body: elmCaseExpr{
+							Expr: elmCallExpr{
+								Fn:   elmVarExpr{Name: "fromString"},
+								Args: []elmExpr{elmVarExpr{Name: "value"}},
+							},
+							Branches: []elmCaseBranch{
+								{
+									Pattern: elmVariantPattern{Name: "Ok", Inner: elmVarPattern{Name: "enumValue"}},
+									Body: elmCallExpr{
+										Fn:   elmVarExpr{Name: "Decode.succeed"},
+										Args: []elmExpr{elmVarExpr{Name: "enumValue"}},
+									},
+								},
+								{
+									Pattern: elmVariantPattern{Name: "Err", Inner: elmVarPattern{Name: "err"}},
+									Body: elmCallExpr{
+										Fn:   elmVarExpr{Name: "Decode.fail"},
+										Args: []elmExpr{elmVarExpr{Name: "err"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func enumEncoderBodyString() elmExpr {
+	return elmCallExpr{
+		Fn: elmVarExpr{Name: "Encode.string"},
+		Args: []elmExpr{
+			elmParensExpr{
+				Expr: elmCallExpr{
+					Fn:   elmVarExpr{Name: "toString"},
+					Args: []elmExpr{elmVarExpr{Name: "value"}},
+				},
+			},
+		},
+	}
 }
 
 func variantUnionCases(def *schemaDef) []elmUnionCase {
@@ -528,8 +705,10 @@ func exactFunctionNamesForModule(m *model, names []string) []string {
 				}
 			}
 		case kindEnum:
-			for _, c := range def.Enum {
-				needed[enumExactFunctionName(c.Value)] = true
+			if !enumIsStringOnly(def) {
+				for _, c := range def.Enum {
+					needed[enumExactFunctionName(c.Value)] = true
+				}
 			}
 		}
 	}

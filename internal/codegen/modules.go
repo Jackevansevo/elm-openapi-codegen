@@ -70,6 +70,9 @@ func moduleExposures(m *model, names []string) []string {
 		out = append(out, decoderName(name))
 		if def.Kind == kindEnum {
 			out = append(out, encoderName(name))
+			out = append(out, "all")
+			out = append(out, "toString")
+			out = append(out, "fromString")
 		}
 	}
 	slices.Sort(out)
